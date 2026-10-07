@@ -1,0 +1,99 @@
+\documentclass[11pt]{article}
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm,booktabs,graphicx,hyperref}
+\hypersetup{hidelinks}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.35em}
+\setlength{\emergencystretch}{2em}
+\title{CS 577 Deep Learning\\Homework 3: Attention and Transformer Forward}
+\author{Your Name (Hawk username: \texttt{yourname})}
+\date{Fall 2026}
+\begin{document}
+\maketitle
+\section*{Part 0: Setup and Axes}
+\subsection*{0.1 Environment and public tests}
+% Report actual versions, CPU, seed, test command and result.
+TODO
+\subsection*{0.2 Axis and mask contract}
+% Define each axis, S/A/Y shapes, softmax axis, and (B,1,1,Tk) key mask.
+TODO
+\section*{Part 1: Hand Calculation}
+\subsection*{1.1 Unmasked attention}
+% Give QK transpose, scaled scores, all weights and outputs with shapes.
+% Expand the cat row softmax and weighted sum. Round to four decimals.
+TODO
+\subsection*{1.2 Causal attention}
+% Show each query's visible keys, mask, weights and outputs.
+% Explain last-row equality and output feature width.
+TODO
+\subsection*{1.3 Scaling and stability}
+% Show variance before/after scaling and row-max cancellation in softmax.
+TODO
+\section*{Part 2: Stable Masked Attention}
+\subsection*{2.1 Numerical stability and fully blocked rows}
+% Report the extreme-score and empty-row checks; explain your guard.
+TODO
+\subsection*{2.2 Hand-case agreement}
+% Report differences between full-precision hand/reference values and code.
+TODO
+\subsection*{2.3 Padding and causal masks}
+% Show both combined masks, padded/future weights, and padding perturbation error.
+TODO
+\section*{Part 3: Multi-Head Attention}
+\subsection*{3.1 Shape trace, attention maps, and outputs}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Stage & Meaning & Shape \\
+\midrule
+$X$ & input features & TODO \\
+$XW_Q,XW_K,XW_V$ & projected features & TODO \\
+$Q,K,V$ & after splitting heads & TODO \\
+$S,A$ & scores and weights per head & TODO \\
+Head outputs & weighted values per head & TODO \\
+Merged outputs & concatenated head features & TODO \\
+$Y_{\mathrm{MHA}}$ & after output projection & TODO \\
+\bottomrule
+\end{tabular}
+\end{center}
+% Include the two maps and final output. Explain projection before splitting.
+% Example: \includegraphics[width=.95\linewidth]{hw3_attention_maps.png}
+TODO
+\subsection*{3.2 Independent PyTorch comparison}
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Case & Maximum output error & Maximum weight error \\
+\midrule
+Unmasked self-attention & TODO & TODO \\
+Causal self-attention & TODO & TODO \\
+Rectangular cross-attention & TODO & TODO \\
+\bottomrule
+\end{tabular}
+\end{center}
+% State parameter mapping and mask conventions.
+TODO
+\subsection*{3.3 Head count and head-output ablation}
+% H=1 vs H=2: widths, scores, counts, output difference.
+% Zero each head output before merging; report both changes and interpretation.
+TODO
+\section*{Part 4: Transformer Block}
+\subsection*{4.1 Shape trace and reference checks}
+% N1/U/N2/F/Z, independent PyTorch error and zero-update residual check.
+TODO
+\subsection*{4.2 Positions and reordering}
+% All PE rows, feature-wise addition, two permutation errors and interpretation.
+TODO
+\subsection*{4.3 Future perturbation and causal visibility}
+% First-two-position errors with and without masking; interpret each module.
+TODO
+\section*{Part 5: Architecture Comparison}
+\subsection*{5.1 Encoder--decoder and decoder-only generation}
+% Trace BOS->Le and Le->chat; identify queries and source K/V.
+% Decoder-only prompt last position predicts Le; explain causal prefill.
+TODO
+\section*{Assistance and Generative-AI Disclosure}
+% Name each tool/person, purpose, and what you independently verified/changed.
+% If none, use the exact disclosure sentence in the assignment.
+TODO
+\end{document}
