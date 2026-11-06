@@ -18,7 +18,33 @@ def masked_softmax(scores: np.ndarray,
     without NaNs or warnings (an explicit guard, not ordinary softmax).
     Reject non-Boolean/non-broadcastable masks with ValueError. No mutation.
     """
-    raise NotImplementedError("Implement masked_softmax")
+    if scores.ndim<2:
+        raise ValueError("scores must have rank >= 2")
+    if scores.dtype != np.float64:
+        raise ValueError("scores must be of type float64")
+    if not np.isfinite(scores).all():
+        raise ValueError("scores must be finite")
+    if allowed is not None:
+        if allowed.dtype != np.bool_:
+            raise ValueError("allowed must be a Boolean array")
+        try:
+            allowed = np.broadcast_to(allowed, scores.shape)
+        except ValueError:
+            raise ValueError("allowed must be broadcastable to scores.shape")
+    if allowed is not None:
+        scores = np.where(allowed, scores, -np.inf)
+    scores_max = np.max(scores, axis=-1, keepdims=True)
+    scores_max = np.where(np.isfinite(scores_max), scores_max, 0.0)
+    scores_exp = np.exp(scores - scores_max)
+    if allowed is not None:
+        scores_exp = np.where(allowed, scores_exp, 0.0)
+    row_sums = np.sum(scores_exp, axis=-1, keepdims=True)
+
+    # Avoid division by zero for fully blocked rows
+    row_sums = np.where(row_sums == 0, 1.0, row_sums)
+    softmax = scores_exp / row_sums
+    return softmax
+
 
 
 def causal_mask(length: int) -> np.ndarray:
