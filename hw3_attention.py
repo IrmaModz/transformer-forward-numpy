@@ -6,6 +6,7 @@ Do not import an attention/Transformer implementation into this module.
 """
 from typing import Dict, Optional, Tuple
 import numpy as np
+from torch.sparse import softmax
 
 
 def masked_softmax(scores: np.ndarray,
@@ -46,14 +47,18 @@ def masked_softmax(scores: np.ndarray,
     return softmax
 
 
-
 def causal_mask(length: int) -> np.ndarray:
     """Return Boolean (T,T), True at (i,j) iff j <= i; zero-based positions.
 
     Include the diagonal: the input at i predicts the NEXT target token.
     length must be a positive integer. No prefix offsets in this homework.
     """
-    raise NotImplementedError("Implement causal_mask")
+    if isinstance(length, bool) or not isinstance(length, (int, np.integer)):
+        raise ValueError("length must be a positive integer")
+    if length <= 0:
+        raise ValueError("length must be a positive integer")
+   
+    return np.tril(np.ones((length, length), dtype=np.bool_))
 
 
 def scaled_dot_product_attention(Q: np.ndarray, K: np.ndarray, V: np.ndarray,
@@ -67,7 +72,8 @@ def scaled_dot_product_attention(Q: np.ndarray, K: np.ndarray, V: np.ndarray,
     scores (scaled, BEFORE masking) and weights, both (B,H,Tq,Tk).
     Invalid shapes raise ValueError. Use no loops over tokens/batches/heads.
     """
-    raise NotImplementedError("Implement scaled_dot_product_attention")
+    
+    return output, cache
 
 
 def split_heads(X: np.ndarray, num_heads: int) -> np.ndarray:
@@ -76,12 +82,14 @@ def split_heads(X: np.ndarray, num_heads: int) -> np.ndarray:
     Require positive integer H dividing D; invalid requests raise ValueError.
     Keep consecutive projected feature groups together. No input mutation.
     """
-    raise NotImplementedError("Implement split_heads")
+   
+    return X
 
 
 def merge_heads(X: np.ndarray) -> np.ndarray:
     """(B,H,T,dh) -> (B,T,H*dh); exact inverse of split_heads."""
-    raise NotImplementedError("Implement merge_heads")
+    
+    return X
 
 
 def multi_head_attention(X_query: np.ndarray, X_context: Optional[np.ndarray],
