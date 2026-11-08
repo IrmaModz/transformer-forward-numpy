@@ -103,13 +103,29 @@ def split_heads(X: np.ndarray, num_heads: int) -> np.ndarray:
     Require positive integer H dividing D; invalid requests raise ValueError.
     Keep consecutive projected feature groups together. No input mutation.
     """
-   
+    if X.ndim != 3:
+        raise ValueError("X must be 3-dimensional array")
+    B, T, D = X.shape
+    if isinstance(num_heads, bool) or not isinstance(num_heads, (int, np.integer)):
+        raise ValueError("num_heads must be a positive integer")
+    if num_heads <= 0:
+        raise ValueError("num_heads must be a positive integer")
+    if D % num_heads != 0:
+        raise ValueError("D must be divisible by num_heads")
+    dh = D // num_heads
+    X = X.reshape(B, T, num_heads, dh)
+    X = X.transpose(0, 2, 1, 3)
     return X
 
 
 def merge_heads(X: np.ndarray) -> np.ndarray:
     """(B,H,T,dh) -> (B,T,H*dh); exact inverse of split_heads."""
-    
+    if X.ndim != 4:
+        raise ValueError("X must be 4-dimensional array")
+    B, H, T, dh = X.shape
+    X = X.transpose(0, 2, 1, 3)
+    X = X.reshape(B, T, H * dh)
+
     return X
 
 
