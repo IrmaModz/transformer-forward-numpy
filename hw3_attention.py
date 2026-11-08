@@ -145,7 +145,43 @@ def multi_head_attention(X_query: np.ndarray, X_context: Optional[np.ndarray],
       head_outputs: (B,H,Tq,dh); merged: (B,Tq,D).
     Validate dimensions. Do not mutate input arrays or parameters.
     """
-    raise NotImplementedError("Implement multi_head_attention")
+    if X_query.ndim != 3:
+        raise ValueError("X_query must be 3-dimensional array")
+    B, Tq, D = X_query.shape
+    if X_context is None:
+        X_context = X_query
+    if X_context.ndim != 3:
+        raise ValueError("X_context must be 3-dimensional array")
+    B2, Tk, D2 = X_context.shape
+    if B != B2:
+        raise ValueError("Batch sizes must match")
+    if D != D2:
+        raise ValueError("Feature dimensions must match")
+    if isinstance(num_heads, bool) or not isinstance(num_heads, (int, np.integer)):
+        raise ValueError("num_heads must be a positive integer")
+    if num_heads <= 0:
+        raise ValueError("num_heads must be a positive integer")
+    if D % num_heads != 0:
+        raise ValueError("D must be divisible by num_heads")
+    for name in ('Wq', 'Wk', 'Wv', 'Wo'):
+        if name not in params:
+            raise ValueError(f"params must contain '{name}'")
+        if params[name].shape != (D, D):
+            raise ValueError(f"params['{name}'] must have shape (D, D)")
+    Q = split_heads(X_query @ params['Wq'], num_heads)
+    K = split_heads(X_context @ params['Wk'], num_heads)
+    V = split_heads(X_context @ params['Wv'], num_heads)    
+    head_outputs, attn_cache = scaled_dot_product_attention(Q, K, V, allowed)
+    merged = merge_heads(head_outputs)
+
+    Y = merged @ params['Wo']
+    cache = {
+        'Q': Q, 'K': K, 'V': V,
+        'scores': attn_cache['scores'], 'weights': attn_cache['weights']    ,
+        'head_outputs': head_outputs, 'merged': merged
+    }
+
+    return Y, cache
 
 
 def transformer_block(X: np.ndarray, params: dict, num_heads: int,
