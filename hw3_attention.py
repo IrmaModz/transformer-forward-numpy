@@ -72,7 +72,28 @@ def scaled_dot_product_attention(Q: np.ndarray, K: np.ndarray, V: np.ndarray,
     scores (scaled, BEFORE masking) and weights, both (B,H,Tq,Tk).
     Invalid shapes raise ValueError. Use no loops over tokens/batches/heads.
     """
-    
+    if Q.ndim != 4 or K.ndim != 4 or V.ndim != 4:
+        raise ValueError("Q, K, V must be 4-dimensional arrays")
+    B, H, Tq, dk = Q.shape
+    B2, H2, Tk, dk2 = K.shape
+    B3, H3, Tk2, dv = V.shape
+    if B != B2 or B != B3:
+        raise ValueError("Batch sizes must match")
+    if H != H2 or H != H3:
+        raise ValueError("Number of heads must match")
+    if dk != dk2:
+        raise ValueError("Query and key feature widths must match")
+    if dk <= 0:
+        raise ValueError("dk must be positive")
+    if Tk != Tk2:
+        raise ValueError("Key and value token counts must match")  
+    cache = {}
+    scores = np.matmul(Q, K.transpose(0, 1, 3, 2)) / np.sqrt(dk)
+    weights = masked_softmax(scores, allowed=allowed)
+    output = np.matmul(weights, V)
+    cache['scores'] = scores
+    cache['weights'] = weights
+
     return output, cache
 
 
