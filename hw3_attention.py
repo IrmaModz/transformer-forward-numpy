@@ -4,8 +4,11 @@ Complete the eight TODO functions. Preserve names, arguments, return order,
 and required cache keys. Boolean masks in THIS assignment use True=allowed.
 Do not import an attention/Transformer implementation into this module.
 """
-from typing import Dict, Optional, Tuple
+from linecache import cache
+import re
+from typing import Dict, Optional, Required, Tuple
 import numpy as np
+from torch import relu
 from torch.sparse import softmax
 
 
@@ -199,8 +202,74 @@ def transformer_block(X: np.ndarray, params: dict, num_heads: int,
     W1:(D,Dff), b1:(Dff,), W2:(Dff,D), b2:(D,).
     This exercise uses ReLU and pre-norm; do not change the block order.
     """
-    raise NotImplementedError("Implement transformer_block")
 
+    X = np.asarray(X, dtype=np.float64)
+
+    if X.ndim != 3:
+        raise ValueError("X must have shape (B, T, D)")
+
+    B, T, D = X.shape
+
+    required_params = (
+        "ln1_gamma", "ln1_beta",
+        "ln2_gamma", "ln2_beta",
+        "mha", "W1", "b1", "W2", "b2"
+    )
+
+    for name in required_params:
+        if name not in params:
+            raise ValueError(f"Missing required parameter: {name}")
+
+    for name in ("ln1_gamma", "ln1_beta", "ln2_gamma", "ln2_beta"):
+        if params[name].shape != (D,):
+            raise ValueError(f"{name} must have shape ({D},)")
+  
+    if params["W1"].ndim != 2 or params["W1"].shape[0] != D:
+        raise ValueError("W1 must have shape (D, Dff)")
+
+    Dff = params["W1"].shape[1]
+
+    if params["b1"].shape != (Dff,):
+        raise ValueError("b1 must have shape (Dff,)")
+    if params["W2"].shape != (Dff, D):
+        raise ValueError("W2 must have shape (Dff, D)")
+
+    if params["b2"].shape != (D,):
+        raise ValueError("b2 must have shape (D,)")
+
+    N1 = layer_norm(
+        X,
+        params["ln1_gamma"],
+        params["ln1_beta"],
+        eps
+    )
+    U, attn_cache = multi_head_attention(
+        N1, None, params["mha"], num_heads, allowed
+    )
+
+    U = X + U
+    N2 = layer_norm(
+        U,
+        params["ln2_gamma"],
+        params["ln2_beta"],
+        eps
+    )
+    F = relu(
+        N2 @ params["W1"] + params["b1"]
+    ) @ params["W2"] + params["b2"]
+
+    Z = U + F
+    cache = {
+        "N1": N1,
+        "U": U,
+        "N2": N2,
+        "F": F,
+        "Z": Z,
+        "weights": attn_cache["weights"]
+    }
+
+    return Z, cache
+    
 
 def sinusoidal_positions(length: int, model_dim: int) -> np.ndarray:
     """Return float64 (T,D) with zero-based positions and even D.
