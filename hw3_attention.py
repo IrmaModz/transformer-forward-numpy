@@ -278,7 +278,21 @@ def sinusoidal_positions(length: int, model_dim: int) -> np.ndarray:
     Column 2*m is sin(p*omega_m); 2*m+1 is cos(p*omega_m).
     length and model_dim must be positive integers; D must be even.
     """
-    raise NotImplementedError("Implement sinusoidal_positions")
+    if isinstance(length, (bool, np.bool_)) or not isinstance(length, (int, np.integer)):
+        raise ValueError("length must be a positive integer")
+    if isinstance(model_dim, (bool, np.bool_)) or not isinstance(model_dim, (int, np.integer)):
+        raise ValueError("model_dim must be a positive integer")
+    if length <= 0:
+        raise ValueError("length must be positive")
+    if model_dim <= 0 or model_dim % 2 != 0:
+        raise ValueError("model_dim must be positive and even")
+
+    positions = np.arange(length)[:, None]
+    div_term = np.exp(np.arange(0, model_dim, 2) * -(np.log(10000.0) / (model_dim)))
+    pe = np.zeros((length, model_dim))
+    pe[:, 0::2] = np.sin(positions * div_term)
+    pe[:, 1::2] = np.cos(positions * div_term)
+    return pe
 
 
 # PROVIDED HELPERS BELOW: use these unchanged. They are not graded TODOs.
