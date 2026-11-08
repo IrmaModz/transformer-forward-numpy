@@ -4,13 +4,8 @@ Complete the eight TODO functions. Preserve names, arguments, return order,
 and required cache keys. Boolean masks in THIS assignment use True=allowed.
 Do not import an attention/Transformer implementation into this module.
 """
-from linecache import cache
-import re
-from typing import Dict, Optional, Required, Tuple
+from typing import Dict, Optional, Tuple
 import numpy as np
-from torch import relu
-from torch.sparse import softmax
-
 
 def masked_softmax(scores: np.ndarray,
                    allowed: Optional[np.ndarray] = None) -> np.ndarray:
@@ -254,8 +249,8 @@ def transformer_block(X: np.ndarray, params: dict, num_heads: int,
         params["ln2_beta"],
         eps
     )
-    F = relu(
-        N2 @ params["W1"] + params["b1"]
+    F = np.maximum(
+    0, N2 @ params["W1"] + params["b1"]
     ) @ params["W2"] + params["b2"]
 
     Z = U + F
