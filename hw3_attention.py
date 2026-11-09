@@ -175,7 +175,7 @@ def multi_head_attention(X_query: np.ndarray, X_context: Optional[np.ndarray],
     Y = merged @ params['Wo']
     cache = {
         'Q': Q, 'K': K, 'V': V,
-        'scores': attn_cache['scores'], 'weights': attn_cache['weights']    ,
+        'scores': attn_cache['scores'], 'weights': attn_cache['weights'],
         'head_outputs': head_outputs, 'merged': merged
     }
 

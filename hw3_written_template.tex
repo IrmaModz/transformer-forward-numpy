@@ -11,18 +11,67 @@
 \begin{document}
 \maketitle
 \section*{Part 0: Setup and Axes}
-\subsection*{0.1 Environment and public tests}
-% Report actual versions, CPU, seed, test command and result.
-The notebook setup output was 
-\texttt{Python 3.11.18}, \texttt{NumPy 2.4.6},
-\texttt{PyTorch 2.15.0}, and \texttt{Matplotlib 3.11.2}; the device was
-\texttt{cpu} and the seed was \texttt{577}. I ran the public tests with
-\texttt{python -m unittest -v test\_hw3\_public.py}. The run executed 11 tests
-and failed with 11 errors because the starter functions raise
-\texttt{NotImplementedError}.
+All experiments were executed on a CPU with a fixed random seed of
+\texttt{577}. The notebook environment used the following versions:
+
+\begin{itemize}
+    \item Python: \texttt{3.11.18}
+    \item NumPy: \texttt{2.4.6}
+    \item PyTorch: \texttt{2.15.0}
+    \item Matplotlib: \texttt{3.11.2}
+    \item Device: \texttt{CPU}
+\end{itemize}
+
+All 11 public tests passed successfully. These tests covered stable
+masked softmax, causal masking, scaled dot-product attention,
+head splitting and merging, multi-head self-attention and
+cross-attention, positional encodings, and Transformer block behavior.
+
+The final test summary was:
+
+\begin{verbatim}
+    Ran 11 tests in 0.047s
+
+    OK
+
+    Public-test return code: 0
+\end{verbatim}
+
+No failures or errors were reported.
+
 \subsection*{0.2 Axis and mask contract}
 % Define each axis, S/A/Y shapes, softmax axis, and (B,1,1,Tk) key mask.
-TODO
+The attention scores $S$, attention weights $A$, and output $Y$
+have the following shapes:
+
+\[
+S: (B, H, T_q, T_k), \qquad
+A: (B, H, T_q, T_k), \qquad
+Y: (B, H, T_q, d_v).
+\]
+
+Here, $B$ is the batch size, $H$ is the number of heads,
+$T_q$ is the number of query tokens, $T_k$ is the number
+of key tokens, $d_k$ is the query/key feature size,
+and $d_v$ is the value feature size.
+
+We apply softmax along the last axis ($T_k$) because
+each query compares itself with all keys. Softmax gives
+a probability to each allowed key, and these probabilities
+add up to 1. If all keys are blocked, the probabilities
+are all zero.
+
+The key mask first has shape $(B, T_k)$. We reshape it
+to $(B, 1, 1, T_k)$ because each batch may have a different
+mask, but the same mask is used for all heads and queries
+within that batch.
+
+NumPy broadcasting works by matching dimensions from
+right to left. A dimension of size 1 can expand to match
+the corresponding dimension in another array.
+
+This allows the mask with shape $(B, 1, 1, T_k)$ to work
+with attention scores of shape $(B, H, T_q, T_k)$.
 \section*{Part 1: Hand Calculation}
 \subsection*{1.1 Unmasked attention}
 % Give QK transpose, scaled scores, all weights and outputs with shapes.
