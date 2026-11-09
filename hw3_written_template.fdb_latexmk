@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1794200605.51157 "/Users/irmamodzgvrishvili/Desktop/Education/Illinois/Fall26/CS 577/transformer-forward-numpy/hw3_written_template.tex" "hw3_written_template.pdf" "hw3_written_template" 1794200605.95038 0
-  "/Users/irmamodzgvrishvili/Desktop/Education/Illinois/Fall26/CS 577/transformer-forward-numpy/hw3_written_template.tex" 1794200605.27515 32710 c0ce413f673a00e62cc1f990be85e9e5 ""
+["pdflatex"] 1794201304.94011 "/Users/irmamodzgvrishvili/Desktop/Education/Illinois/Fall26/CS 577/transformer-forward-numpy/hw3_written_template.tex" "hw3_written_template.pdf" "hw3_written_template" 1794201305.35392 0
+  "/Users/irmamodzgvrishvili/Desktop/Education/Illinois/Fall26/CS 577/transformer-forward-numpy/hw3_written_template.tex" 1794201304.6995 32791 c2c369581b5b4995c5836889cd52a554 ""
   "/Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/tfm/jknappen/ec/tcrm1095.tfm" 1136768653 1536 02c06700a42be0f5a28664c7273f82e7 ""
   "/Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy6.tfm" 1246382020 1124 14ccf5552bc7f77ca02a8a402bea8bfb ""
   "/Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy8.tfm" 1246382020 1120 200be8b775682cdf80acad4be5ef57e4 ""
@@ -101,10 +101,10 @@
   "/Users/irmamodzgvrishvili/Library/TinyTeX/texmf-var/fonts/pk/ljfour/jknappen/ec/tcrm1095.600pk" 1788117007.91197 12644 de5e0ceec44533a99567d5ba205381bd ""
   "/Users/irmamodzgvrishvili/Library/TinyTeX/texmf-var/web2c/pdftex/pdflatex.fmt" 1762202793 2234531 87c6f64d6d8be4584fb7f7c9f819ae81 ""
   "/Users/irmamodzgvrishvili/Library/TinyTeX/texmf.cnf" 1748906819.59462 708 85fd07691b6294ba94c59dbc62380410 ""
-  "hw3_attention_maps.png" 1794198467.4219 45544 029d3435654b42bdfbf7767d48f73e8c ""
-  "hw3_written_template.aux" 1794200605.89066 484 e9f1e45ae2ea12d42bc08219574b0033 "pdflatex"
-  "hw3_written_template.out" 1794200605.75416 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "hw3_written_template.tex" 1794200605.27515 32710 c0ce413f673a00e62cc1f990be85e9e5 ""
+  "hw3_attention_maps.png" 1794200887.37149 45544 029d3435654b42bdfbf7767d48f73e8c ""
+  "hw3_written_template.aux" 1794201305.29715 484 e9f1e45ae2ea12d42bc08219574b0033 "pdflatex"
+  "hw3_written_template.out" 1794201305.16165 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "hw3_written_template.tex" 1794201304.6995 32791 c2c369581b5b4995c5836889cd52a554 ""
   (generated)
   "hw3_written_template.aux"
   "hw3_written_template.log"
