@@ -912,6 +912,12 @@ original features.
 This would not be the same as using the learned
 full-width projections, because the projections
 can mix information from all input features.
+\textbf{Attention map interpretation:} The attention weights in both heads are mostly
+between 0.29 and 0.40. The heads give similar
+attention to all three words, without strongly
+focusing on one word. This makes sense because the projection matrices
+have random values and have not been trained
+to learn language patterns.
 \subsection*{3.2 Independent PyTorch comparison}
 I compared my NumPy implementation with
 \texttt{torch.nn.MultiheadAttention}.
@@ -1089,6 +1095,22 @@ trained on a language task.
 Therefore, these attention maps do not prove
 that either head learned a specific meaning
 or language role.
+\textbf{Why the outputs can differ:} With one head, all four features are used together
+to calculate attention weights. The scores are
+divided by $\sqrt{4}=2$, and softmax is applied once.
+
+With two heads, the features are split into two
+groups. Each head uses two features, divides
+the scores by $\sqrt{2}$, and calculates its own
+softmax.
+
+Softmax is not a linear function, so two separate
+softmax calculations do not give the same result
+as one combined calculation.
+
+That is why changing the number of heads can
+change the final output, even when the input
+and projection matrices stay the same.
 \section*{Part 4: Transformer Block}
 \subsection*{4.1 Shape trace and reference checks}
 % N1/U/N2/F/Z, independent PyTorch error and zero-update residual check.
