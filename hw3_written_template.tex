@@ -30,7 +30,7 @@ cross-attention, positional encodings, and Transformer block behavior.
 The final test summary was:
 
 \begin{verbatim}
-    Ran 11 tests in 0.047s
+    Ran 11 tests in 0.015s
 
     OK
 
@@ -204,9 +204,7 @@ Y=AV=
 
 The output matrix $Y$ has shape $(3,2)$.
 
-\paragraph{Weighted sum for cat.}
-
-The value vectors are:
+\textbf{Weighted sum for cat:} The value vectors are:
 
 \[
 V_{\mathrm{The}}=[1,0],\qquad
@@ -620,9 +618,7 @@ The implementation supports rectangular attention
 It raises \texttt{ValueError} when input dimensions
 are not compatible.
 
-\paragraph{Hand-case results.}
-
-I tested my implementation using the provided
+\textbf{Hand-case results:} I tested my implementation using the provided
 \texttt{hand\_case()} with three tokens:
 The, cat, and sleeps.
 
@@ -656,9 +652,7 @@ Both outputs have shape $(1,1,3,2)$.
 The matrices above omit the batch and head axes
 for easier reading.
 
-\paragraph{Numerical agreement.}
-
-I compared the NumPy results with the values
+\textbf{Numerical agreement:} I compared the NumPy results with the values
 written to four decimal places in Part 1.
 
 The maximum absolute differences, based on
@@ -754,9 +748,7 @@ I tested fully blocked rows separately in
 Section 2.1. They returned zeros without
 warnings or NaN values.
 
-\textbf{Mask rules in PyTorch.}
-
-My NumPy code uses True for allowed keys.
+\textbf{Mask rules in PyTorch:} My NumPy code uses True for allowed keys.
 
 In \texttt{torch.nn.MultiheadAttention},
 True means blocked. Therefore, I invert my
@@ -899,9 +891,7 @@ Y_{\mathrm{MHA}}=
 The final output has shape $(1,3,4)$.
 The matrix above shows the single batch.
 
-\textbf{Why projection comes before splitting.}
-
-The projection matrices use all four input
+\textbf{Why projection comes before splitting:} The projection matrices use all four input
 features to calculate new query, key, and
 value features.
 
@@ -1046,16 +1036,6 @@ Changing the number of heads changes how
 the features are divided, but it does not
 change the size of these projection matrices.
 
-\textbf{Why the outputs can differ:} With one head, attention uses all four
-projected features together.
-
-With two heads, each head uses two features
-and calculates its own attention weights.
-
-Because the score calculations and attention
-weights are different, the final outputs
-can also be different.
-
 \textbf{Removing one head:} I tested the effect of removing each head. I set one head's output to zero before
 merging the heads and applying $W_O$.
 
@@ -1095,6 +1075,7 @@ trained on a language task.
 Therefore, these attention maps do not prove
 that either head learned a specific meaning
 or language role.
+
 \textbf{Why the outputs can differ:} With one head, all four features are used together
 to calculate attention weights. The scores are
 divided by $\sqrt{4}=2$, and softmax is applied once.
@@ -1114,20 +1095,399 @@ and projection matrices stay the same.
 \section*{Part 4: Transformer Block}
 \subsection*{4.1 Shape trace and reference checks}
 % N1/U/N2/F/Z, independent PyTorch error and zero-update residual check.
-TODO
+I used the provided function
+\texttt{initialize\_block(4, 8, seed=577)}
+to create the parameters.
+
+The Transformer block uses pre-normalization,
+two residual connections, and a feed-forward
+network with ReLU. No dropout is used.
+
+The calculations are:
+
+\[
+\begin{aligned}
+N_1 &= \mathrm{LN}_1(X),\\
+U &= X+\mathrm{MHA}(N_1),\\
+N_2 &= \mathrm{LN}_2(U),\\
+F &= \mathrm{ReLU}(N_2W_1+b_1)W_2+b_2,\\
+Z &= U+F.
+\end{aligned}
+\]
+
+The input has one batch, three tokens, and
+four features:
+
+\[
+X:(1,3,4).
+\]
+
+The shapes of the intermediate results are:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Variable & Shape \\
+\midrule
+$N_1$ & $(1,3,4)$ \\
+$U$ & $(1,3,4)$ \\
+$N_2$ & $(1,3,4)$ \\
+$F$ & $(1,3,4)$ \\
+$Z$ & $(1,3,4)$ \\
+Attention weights & $(1,2,3,3)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The feed-forward network has a hidden width of 8.
+The parameter shapes are:
+
+\[
+\begin{aligned}
+W_1 &: (4,8), & b_1 &: (8),\\
+W_2 &: (8,4), & b_2 &: (4).
+\end{aligned}
+\]
+
+Each LayerNorm uses scale and bias vectors
+of shape $(4)$. It uses population variance
+and $\epsilon=10^{-5}$.
+
+The final Transformer block output was:
+
+\[
+Z=
+\begin{bmatrix}
+1.6988 & -1.1299 & 0.4089 & 0.9216\\
+0.9056 & 0.7420 & 1.5733 & -1.1551\\
+0.6542 & 0.9556 & -0.1768 & -0.0796
+\end{bmatrix}.
+\]
+
+The final output has shape $(1,3,4)$.
+The matrix above shows the single batch.
+
+\textbf{Independent PyTorch reference check:} I created the same Transformer block using
+PyTorch LayerNorm, my independent PyTorch multi-head attention reference, and PyTorch matrix multiplication with ReLU.
+
+I used the same input and parameters in both
+implementations.
+
+The maximum absolute output difference was:
+
+\[
+\boxed{6.66\times10^{-16}}
+\]
+
+This is smaller than the required $10^{-9}$,
+so my NumPy and PyTorch results agree within
+floating-point precision.
+
+\textbf{Zero-update residual check:} I set the following parameters to zero:
+
+\[
+W_O=0,\qquad W_2=0,\qquad b_2=0.
+\]
+
+Setting $W_O$ to zero makes the attention
+output zero, so the first residual connection
+returns the original input:
+
+\[
+U=X+0=X.
+\]
+
+Setting $W_2$ and $b_2$ to zero makes the
+feed-forward output zero:
+
+\[
+F=0.
+\]
+
+Therefore, the second residual connection gives:
+
+\[
+Z=U+0=X.
+\]
+
+The maximum absolute difference between
+the block output and the original input was:
+
+\[
+\boxed{0.0}
+\]
+
+This confirms that the residual connections
+allow the block to return the input unchanged
+when both updates are zero.
 \subsection*{4.2 Positions and reordering}
 % All PE rows, feature-wise addition, two permutation errors and interpretation.
-TODO
+I used sinusoidal position vectors to give the
+model information about token positions.
+
+For an even feature width $D$, the formulas are:
+
+\[
+\omega_m = 10000^{-2m/D},
+\]
+
+\[
+PE_{p,2m} = \sin(p\omega_m),
+\qquad
+PE_{p,2m+1} = \cos(p\omega_m).
+\]
+
+For $D=4$, the two rates are:
+
+\[
+\omega_0=1,\qquad \omega_1=0.01.
+\]
+
+I created position vectors for three positions.
+The position matrix has shape $(3,4)$:
+
+\[
+PE=
+\begin{bmatrix}
+0 & 1 & 0 & 1\\
+0.8415 & 0.5403 & 0.0100 & 1.0000\\
+0.9093 & -0.4161 & 0.0200 & 0.9998
+\end{bmatrix}.
+\]
+
+Each row represents one position, and each
+position has four features.
+
+I added the position vectors to the token
+embeddings feature by feature:
+
+\[
+X_{\mathrm{pos}}=X+PE.
+\]
+
+The input $X$ has shape $(1,3,4)$, and $PE$
+has shape $(3,4)$. NumPy broadcasts $PE$
+over the batch dimension.
+
+The result $X_{\mathrm{pos}}$ has shape $(1,3,4)$.
+The position vectors are added, not concatenated,
+so the number of features stays the same.
+
+
+\textbf{Reordering without position vectors:} I changed the token order from The/cat/sleeps
+to sleeps/The/cat, using indices $[2,0,1]$.
+
+I tested the block without position vectors
+and without a causal mask.
+
+The maximum absolute difference was:
+
+\[
+\boxed{5.55\times10^{-16}}
+\]
+
+This is almost zero. Attention uses information
+from all tokens and does not depend on their
+order when no position information is given.
+
+LayerNorm and the feed-forward network work
+on each token separately.
+
+Because of this, changing the input order
+changes the output order in the same way.
+This is called permutation equivariance.
+
+It means the block cannot identify token order
+without position information.
+
+\textbf{Reordering with position vectors:} Next, I added position vectors and repeated
+the same test.
+
+I kept the position vectors in their original
+slots and moved only the token embeddings.
+
+The maximum absolute difference was:
+
+\[
+\boxed{1.2616}
+\]
+
+Each moved token now receives a different
+position vector. Its new input is the token
+embedding plus the position vector at its
+new location.
+
+Therefore, the new input is not just a
+reordered copy of the original input.
+
+This changes the attention calculations and
+the final outputs.
+
+The result shows that position vectors make
+the Transformer block sensitive to token order.
 \subsection*{4.3 Future perturbation and causal visibility}
 % First-two-position errors with and without masking; interpret each module.
-TODO
+I used the input with position vectors:
+
+\[
+X_{\mathrm{pos}}=X+PE.
+\]
+
+I changed only the last token by adding
+the following vector to its embedding:
+
+\[
+\Delta=[5,-3,2,-4].
+\]
+
+I compared the outputs at the first two
+token positions before and after this change.
+
+\textbf{With a causal mask:} The maximum absolute output difference
+at the first two positions was:
+
+\[
+\boxed{0.0}
+\]
+
+With a causal mask, the first two tokens
+cannot attend to the last token because
+it is in the future.
+
+LayerNorm and the feed-forward network
+work on each token separately.
+The residual connections also keep
+the information at the same token position.
+
+Therefore, changing the last token does
+not affect the first two outputs.
+
+\textbf{Without a causal mask:} The maximum absolute output difference
+at the first two positions was:
+
+\[
+\boxed{0.5173}
+\]
+
+Without a causal mask, the first two tokens
+can attend to the last token.
+
+Changing the last token can change its
+key and value vectors. This can affect
+the attention weights and the outputs
+of the earlier tokens.
+
+LayerNorm, the feed-forward network,
+and residual connections do not directly
+mix information between different tokens.
+The change reaches earlier positions
+through self-attention.
+
+\textbf{Why the diagonal is allowed:} When the model uses position $i$ to predict
+token $i+1$, it is allowed to see the
+current token at position $i$.
+
+The diagonal of the causal mask allows
+a token to attend to itself.
+
+It does not allow the token to see
+future positions, including position $i+1$.
+
+Therefore, allowing the diagonal does
+not reveal the token being predicted.
 \section*{Part 5: Architecture Comparison}
 \subsection*{5.1 Encoder--decoder and decoder-only generation}
 % Trace BOS->Le and Le->chat; identify queries and source K/V.
 % Decoder-only prompt last position predicts Le; explain causal prefill.
-TODO
+We want to translate the English sentence "The cat sleeps" into French: "Le chat dort".
+
+First, the encoder reads all three source tokens:
+The, cat, and sleeps. It creates a representation
+for each source token.
+
+The decoder starts with the supplied BOS
+(beginning-of-sequence) token.
+
+To predict the first word, Le, the decoder
+uses the BOS position.
+
+In cross-attention, the query comes from the
+decoder's current hidden representation at
+the BOS position.
+
+The keys and values come from the encoder
+representations of all three source tokens:
+The, cat, and sleeps.
+
+The decoder uses these source representations
+to help predict Le.
+
+After Le is predicted, it becomes the next
+decoder input.
+
+To predict chat, the decoder uses the
+representation at the Le position.
+
+With causal self-attention, the decoder can
+see the target inputs BOS and Le, but it
+cannot see future target words such as
+chat or dort.
+
+In cross-attention, it can still use all
+three source tokens: The, cat, and sleeps.
+
+In this example, BOS is supplied to start
+generation. It is not predicted by the model.
+
+\textbf{Decoder-only Transformer:} For the decoder-only model, the prompt is:
+
+\[
+\text{French : The cat sleeps =}
+\]
+
+All prompt tokens are given to the model.
+
+The final hidden vector at the "=" position
+is used to predict the next token, Le.
+
+During causal prefill, the model processes
+the prompt tokens together, but each query
+can only attend to its own position and
+earlier positions.
+
+For example, the query at the The position
+cannot attend to the later cat or sleeps
+positions.
+
+This is true even though the full prompt
+is already available to the program.
+
+The causal mask controls which keys each
+query can use. Having all tokens in memory
+does not mean every query can read all of them.
+
+\textbf{Main difference:} The encoder-decoder model uses an encoder to read the full source sentence and a decoder to generate the target sentence.
+
+The decoder uses cross-attention to get
+information from the source sentence.
+
+The decoder-only model uses one causal
+sequence containing the prompt and the
+generated tokens.
+
+It predicts the next token using the
+allowed earlier positions in that sequence.
 \section*{Assistance and Generative-AI Disclosure}
 % Name each tool/person, purpose, and what you independently verified/changed.
 % If none, use the exact disclosure sentence in the assignment.
-TODO
+\begin{verbatim}
+python -m unittest -v test_hw3_public.py
+\end{verbatim}
+
+\textbf{What I did and verified myself:} I wrote the core implementation
+of all eight functions and the notebook TODOs, performed the hand
+calculations and the variance derivation, filled in all numerical values,
+ran the public tests and all notebook checks, and wrote the explanations
+in this report. I verified every reported number against my own notebook
+output.
 \end{document}
