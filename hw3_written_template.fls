@@ -164,6 +164,11 @@ INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/tfm/public/cm/c
 INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/tfm/public/cm/cmmib10.tfm
 INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/tfm/public/cm/cmbsy10.tfm
 INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map
+INPUT ./hw3_attention_maps.png
+INPUT ./hw3_attention_maps.png
+INPUT ./hw3_attention_maps.png
+INPUT ./hw3_attention_maps.png
+INPUT ./hw3_attention_maps.png
 INPUT hw3_written_template.aux
 INPUT ./hw3_written_template.out
 INPUT ./hw3_written_template.out
@@ -182,3 +187,4 @@ INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/type1/public/am
 INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb
 INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb
 INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb
+INPUT /Users/irmamodzgvrishvili/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb

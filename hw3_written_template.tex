@@ -522,51 +522,573 @@ returning zeros, as required by the implementation.
 \section*{Part 2: Stable Masked Attention}
 \subsection*{2.1 Numerical stability and fully blocked rows}
 % Report the extreme-score and empty-row checks; explain your guard.
-TODO
+I implemented masked softmax using NumPy.
+In my code, True means allowed and False means blocked.
+
+The mask is applied before normalization.
+Blocked positions receive attention weights of
+exactly zero.
+
+To avoid overflow, I subtract the largest allowed
+score in each row before calculating the exponential.
+
+\[
+A_{ij} =
+\begin{cases}
+\dfrac{e^{S_{ij}-m_i}}
+{\sum_{r\text{ allowed}}e^{S_{ir}-m_i}},
+& \text{if }j\text{ is allowed},\\[8pt]
+0, & \text{if }j\text{ is blocked}.
+\end{cases}
+\]
+
+Here, $m_i$ is the largest allowed score in row $i$.
+
+For a fully blocked row, the maximum would be
+$-\infty$. Subtracting it from itself would
+produce NaN. To prevent this, my code replaces
+a non-finite row maximum with zero before
+calculating the exponential.
+
+It also uses a safe denominator and returns
+zeros for the fully blocked row.
+
+I tested extreme scores, including
+$[1000,999,-1000]$, and a fully blocked row.
+
+The results were:
+
+\[
+A=
+\begin{bmatrix}
+0.7311 & 0.2689 & 0\\
+0 & 0 & 0
+\end{bmatrix}.
+\]
+
+The row sums were:
+
+\[
+[1.0,\ 0.0].
+\]
+
+All results were finite, with no warnings or
+NaN values.
+
+My code raises ValueError if a mask is not
+Boolean or cannot broadcast to the score shape.
 \subsection*{2.2 Hand-case agreement}
 % Report differences between full-precision hand/reference values and code.
-TODO
+I implemented scaled dot-product attention using
+NumPy and the following formulas:
+
+\[
+S=\frac{QK^\top}{\sqrt{d_k}},
+\qquad
+A=\operatorname{masked\_softmax}(S),
+\qquad
+Y=AV.
+\]
+
+The input shapes are:
+
+\[
+\begin{aligned}
+Q &: (B,H,T_q,d_k),\\
+K &: (B,H,T_k,d_k),\\
+V &: (B,H,T_k,d_v).
+\end{aligned}
+\]
+
+The function returns $(Y,\mathrm{cache})$, where:
+
+\[
+Y:(B,H,T_q,d_v).
+\]
+
+The cache contains the scaled scores before masking
+and the attention weights. Both have shape:
+
+\[
+(B,H,T_q,T_k).
+\]
+
+The implementation supports rectangular attention
+($T_q \ne T_k$) and different feature sizes
+($d_k \ne d_v$).
+
+It raises \texttt{ValueError} when input dimensions
+are not compatible.
+
+\paragraph{Hand-case results.}
+
+I tested my implementation using the provided
+\texttt{hand\_case()} with three tokens:
+The, cat, and sleeps.
+
+The inputs have shape $(1,1,3,2)$, which means
+one batch, one attention head, three tokens,
+and two features.
+
+For unmasked attention, I obtained:
+
+\[
+Y_{\mathrm{full}}=
+\begin{bmatrix}
+1.6044 & 0.7967\\
+1.4011 & 1.2033\\
+1.7587 & 1.0000
+\end{bmatrix}.
+\]
+
+For causal attention, I obtained:
+
+\[
+Y_{\mathrm{causal}}=
+\begin{bmatrix}
+1.0000 & 0\\
+0.3302 & 1.3395\\
+1.7587 & 1.0000
+\end{bmatrix}.
+\]
+
+Both outputs have shape $(1,1,3,2)$.
+The matrices above omit the batch and head axes
+for easier reading.
+
+\paragraph{Numerical agreement.}
+
+I compared the NumPy results with the values
+written to four decimal places in Part 1.
+
+The maximum absolute differences, based on
+the displayed NumPy values, were approximately:
+
+\[
+\begin{aligned}
+\text{Unmasked difference} &\approx 4.8\times10^{-5},\\
+\text{Causal difference} &\approx 3.8\times10^{-5}.
+\end{aligned}
+\]
+
+Both differences are below $5\times10^{-5}$,
+which is the expected rounding difference
+for four decimal places.
+
+The calculations in NumPy use full precision.
 \subsection*{2.3 Padding and causal masks}
 % Show both combined masks, padded/future weights, and padding perturbation error.
-TODO
+I tested two sequences with a maximum length
+of four tokens. The first sequence has two real
+tokens, and the second has four real tokens.
+
+The padding mask has shape $(B,1,1,T)$.
+The causal mask has shape $(1,1,T,T)$.
+
+I combined them using Boolean AND:
+
+\[
+M_{\mathrm{combined}}
+=
+M_{\mathrm{padding}}
+\land M_{\mathrm{causal}}.
+\]
+
+The combined mask has shape $(B,1,T,T)$.
+
+For the first sequence, with two real tokens:
+
+\[
+M_1=
+\begin{bmatrix}
+1&0&0&0\\
+1&1&0&0\\
+1&1&0&0\\
+1&1&0&0
+\end{bmatrix}.
+\]
+
+For the second sequence, with four real tokens:
+
+\[
+M_2=
+\begin{bmatrix}
+1&0&0&0\\
+1&1&0&0\\
+1&1&1&0\\
+1&1&1&1
+\end{bmatrix}.
+\]
+
+Here, 1 means allowed, and 0 means blocked.
+
+In the first sequence, positions 2 and 3 are
+padding, so they are blocked as keys.
+The causal mask also blocks future keys.
+
+I checked all blocked positions in the attention
+weights. The largest blocked weight was:
+
+\[
+\boxed{0.0}
+\]
+
+This shows that padded and future keys received
+zero attention weight.
+
+Next, I multiplied the padded value vectors by
+a large number and checked whether the outputs
+for real query tokens changed.
+
+The maximum changes were:
+
+\[
+\boxed{[0.0,\ 0.0]}
+\]
+
+The outputs did not change. This shows that
+the padded values did not affect the results
+for real tokens.
+
+I tested fully blocked rows separately in
+Section 2.1. They returned zeros without
+warnings or NaN values.
+
+\textbf{Mask rules in PyTorch.}
+
+My NumPy code uses True for allowed keys.
+
+In \texttt{torch.nn.MultiheadAttention},
+True means blocked. Therefore, I invert my
+Boolean mask when using this PyTorch function.
+
+The PyTorch key-padding mask also uses True
+for padding.
+
+In \texttt{torch.nn.functional.scaled\_dot\_product\_attention},
+True means allowed, just like in my NumPy code.
+
+For my PyTorch reference, I used
+\texttt{torch.nn.MultiheadAttention} and inverted
+the allowed mask.
+
+I compared only rows with at least one allowed
+key because fully blocked rows need special handling.
 \section*{Part 3: Multi-Head Attention}
 \subsection*{3.1 Shape trace, attention maps, and outputs}
+I used the provided token embeddings for
+The, cat, and sleeps:
+
+\[
+X=
+\begin{bmatrix}
+1&0&0&1\\
+0&1&1&0\\
+1&1&0&0
+\end{bmatrix}.
+\]
+
+The input has one batch, three tokens, and
+four features:
+
+\[
+B=1,\quad T=3,\quad D=4.
+\]
+
+I used two attention heads:
+
+\[
+H=2,\qquad d_h=\frac{D}{H}=2.
+\]
+
+I initialized the projection matrices using
+\texttt{initialize\_mha(4, seed=577)}.
+
+First, I projected the complete input using
+the query, key, and value matrices:
+
+\[
+Q_{\mathrm{full}}=XW_Q,\qquad
+K_{\mathrm{full}}=XW_K,\qquad
+V_{\mathrm{full}}=XW_V.
+\]
+
+Next, I split the projected features into
+two heads and calculated attention separately
+for each head.
+
+The shapes at each step were:
+
 \begin{center}
 \begin{tabular}{lll}
 \toprule
 Stage & Meaning & Shape \\
 \midrule
-$X$ & input features & TODO \\
-$XW_Q,XW_K,XW_V$ & projected features & TODO \\
-$Q,K,V$ & after splitting heads & TODO \\
-$S,A$ & scores and weights per head & TODO \\
-Head outputs & weighted values per head & TODO \\
-Merged outputs & concatenated head features & TODO \\
-$Y_{\mathrm{MHA}}$ & after output projection & TODO \\
+$X$ & Input features & $(1,3,4)$ \\
+$XW_Q,XW_K,XW_V$ & Projected features & $(1,3,4)$ \\
+$Q,K,V$ & Split heads & $(1,2,3,2)$ \\
+$S,A$ & Scores and weights & $(1,2,3,3)$ \\
+Head outputs & Weighted values & $(1,2,3,2)$ \\
+Merged outputs & Joined heads & $(1,3,4)$ \\
+$Y_{\mathrm{MHA}}$ & Final output & $(1,3,4)$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-% Include the two maps and final output. Explain projection before splitting.
-% Example: \includegraphics[width=.95\linewidth]{hw3_attention_maps.png}
-TODO
+
+Each head calculates its own attention weights.
+The scaling factor is:
+
+\[
+\sqrt{d_h}=\sqrt{2}.
+\]
+
+The attention weights for Head 0 were:
+
+\[
+A_0=
+\begin{bmatrix}
+0.3336&0.3057&0.3607\\
+0.2945&0.3826&0.3229\\
+0.3310&0.3147&0.3544
+\end{bmatrix}.
+\]
+
+The attention weights for Head 1 were:
+
+\[
+A_1=
+\begin{bmatrix}
+0.3433&0.3370&0.3198\\
+0.2884&0.3139&0.3978\\
+0.3293&0.3346&0.3361
+\end{bmatrix}.
+\]
+
+Both attention weight matrices have shape $(3,3)$.
+
+I plotted the weights for both heads.
+The rows show query tokens, and the columns
+show key tokens. Both plots use the same
+color scale from zero to one.
+
+\begin{center}
+\includegraphics[width=0.95\linewidth]
+{hw3_attention_maps.png}
+\end{center}
+
+After calculating attention, I merged the two
+head outputs and applied the output projection:
+
+\[
+Y_{\mathrm{MHA}}
+=
+\operatorname{Concat}(Y_0,Y_1)W_O.
+\]
+
+The final output was:
+
+\[
+Y_{\mathrm{MHA}}=
+\begin{bmatrix}
+-0.8025&0.2970&-0.2950&0.2870\\
+-0.7275&0.4051&-0.2322&0.2978\\
+-0.7932&0.3091&-0.2887&0.2858
+\end{bmatrix}.
+\]
+
+The final output has shape $(1,3,4)$.
+The matrix above shows the single batch.
+
+\textbf{Why projection comes before splitting.}
+
+The projection matrices use all four input
+features to calculate new query, key, and
+value features.
+
+If I split the original input before projection,
+each head would only receive part of the
+original features.
+
+This would not be the same as using the learned
+full-width projections, because the projections
+can mix information from all input features.
 \subsection*{3.2 Independent PyTorch comparison}
+I compared my NumPy implementation with
+\texttt{torch.nn.MultiheadAttention}.
+
+I used the following settings:
+
+\begin{verbatim}
+embed_dim = 4
+num_heads = 2
+bias = False
+dropout = 0.0
+batch_first = True
+dtype = torch.float64
+device = CPU
+\end{verbatim}
+
+PyTorch stores linear weights in transposed form
+compared with my NumPy implementation.
+
+I copied the query, key, and value matrices
+into PyTorch by stacking their transposes:
+
+\[
+W_{\mathrm{in}}=
+\begin{bmatrix}
+W_Q^\top\\
+W_K^\top\\
+W_V^\top
+\end{bmatrix}.
+\]
+
+For the output projection, I used:
+
+\[
+W_{\mathrm{out}}=W_O^\top.
+\]
+
+I used \texttt{average\_attn\_weights=False}
+to compare the weights for each head separately.
+
+My NumPy code uses True for allowed positions.
+In PyTorch's \texttt{nn.MultiheadAttention},
+True means blocked, so I inverted the mask.
+
+I tested three cases:
+unmasked self-attention, causal self-attention,
+and rectangular cross-attention.
+
+The cross-attention test used two query tokens
+and three context tokens.
+
+The maximum absolute errors were:
+
 \begin{center}
 \begin{tabular}{lrr}
 \toprule
-Case & Maximum output error & Maximum weight error \\
+Case & Output error & Weight error \\
 \midrule
-Unmasked self-attention & TODO & TODO \\
-Causal self-attention & TODO & TODO \\
-Rectangular cross-attention & TODO & TODO \\
+Unmasked self &
+$1.11\times10^{-16}$ &
+$5.55\times10^{-17}$ \\
+Causal self &
+$1.11\times10^{-16}$ &
+$5.55\times10^{-17}$ \\
+Rectangular cross &
+$1.11\times10^{-16}$ &
+$5.55\times10^{-17}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-% State parameter mapping and mask conventions.
-TODO
+
+All errors were smaller than $10^{-9}$.
+This shows that my NumPy implementation
+agrees with the independent PyTorch reference
+within floating-point precision.
 \subsection*{3.3 Head count and head-output ablation}
 % H=1 vs H=2: widths, scores, counts, output difference.
 % Zero each head output before merging; report both changes and interpretation.
-TODO
+I compared one attention head with two heads.
+I kept the input and all four projection
+matrices unchanged.
+
+The results were:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Property & $H=1$ & $H=2$ \\
+\midrule
+Features per head & 4 & 2 \\
+Score shape & $(1,1,3,3)$ & $(1,2,3,3)$ \\
+MHA parameters & 64 & 64 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The maximum output difference between
+one head and two heads was:
+
+\[
+\boxed{0.0397}
+\]
+
+\textbf{Why the parameter count is the same:} The total feature width stays $D=4$.
+There are four projection matrices:
+
+\[
+W_Q,W_K,W_V,W_O\in\mathbb{R}^{4\times4}.
+\]
+
+Each matrix has:
+
+\[
+4\times4=16
+\]
+
+parameters.
+
+The total parameter count is:
+
+\[
+4\times16=\boxed{64}.
+\]
+
+Changing the number of heads changes how
+the features are divided, but it does not
+change the size of these projection matrices.
+
+\textbf{Why the outputs can differ:} With one head, attention uses all four
+projected features together.
+
+With two heads, each head uses two features
+and calculates its own attention weights.
+
+Because the score calculations and attention
+weights are different, the final outputs
+can also be different.
+
+\textbf{Removing one head:} I tested the effect of removing each head. I set one head's output to zero before
+merging the heads and applying $W_O$.
+
+First, I checked that merging without removing a head gave the same output:
+
+\[
+\text{Maximum difference}=0.0.
+\]
+
+Then I removed each head separately.
+
+The maximum output changes were:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Experiment & Maximum output change \\
+\midrule
+Remove Head 0 & 0.4549 \\
+Remove Head 1 & 0.4669 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Both heads affect the final output.
+Removing either head changes the result.
+
+Head 1 caused a slightly larger maximum
+change in this example. However, this does
+not prove that Head 1 is more important
+in general.
+
+The projection matrices in this experiment
+are fixed sample parameters and were not
+trained on a language task.
+
+Therefore, these attention maps do not prove
+that either head learned a specific meaning
+or language role.
 \section*{Part 4: Transformer Block}
 \subsection*{4.1 Shape trace and reference checks}
 % N1/U/N2/F/Z, independent PyTorch error and zero-update residual check.
